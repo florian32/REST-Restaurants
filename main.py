@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, render_template, request, session
 from flask_sqlalchemy import SQLAlchemy
 import random
+from bs4 import BeautifulSoup
+import requests
 
 app = Flask(__name__)
 
@@ -61,22 +63,34 @@ def get_restaurant_at_location():
 
 @app.route("/add", methods=["POST", "GET"])
 def post_new_restaurant():
-    new_restaurant = Restaurant(
-        name=request.form.get("name"),
-        location=request.form.get("loc"),
-        map_url=request.form.get("map"),
-        website_url=request.form.get("website"),
-        description=request.form.get("description"),
-        prices=request.form.get("prices"),
 
-    )
-    db.session.add(new_restaurant)
-    db.session.commit()
-    return jsonify(response={"success": "Successfully added the new cafe."})
+    restaurant_name = request.form.get("name")
+    response = requests.get("https://www.google.com/search?q=molam&oq=mol&aqs=chrome.0.69i59j46i175i199i433i512j69i57j0i433i512j46i512j69i60l3.834j0j7&sourceid=chrome&ie=UTF-8")
+    website = response.text
+    soup = BeautifulSoup(website, "html.parser")
+    website_link = soup.find_all('a', class_="ab_button")
+    print(website_link)
 
 
-@app.route("/update-price/<int:restaurant_id>", methods=["PATCH"])
-def patch_new_price(restaurant_id):
+
+
+    # new_restaurant = Restaurant(
+    #     name=request.form.get("name"),
+    #     location=request.form.get("loc"),
+    #     map_url=request.form.get("map"),
+    #     website_url=request.form.get("website"),
+    #     description=request.form.get("description"),
+    #     prices=request.form.get("prices"),
+    #
+    # )
+    # db.session.add(new_restaurant)
+    # db.session.commit()
+    # return jsonify(response={"success": "Successfully added the new restaurant."})
+
+
+@app.route("/update-price", methods=["PATCH", "GET"])
+def patch_new_price():
+    restaurant_id = request.args.get("id")
     new_price = request.args.get("new_price")
     restaurant = db.session.query(Restaurant).get(restaurant_id)
     if restaurant:
