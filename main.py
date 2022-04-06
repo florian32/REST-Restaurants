@@ -4,34 +4,22 @@ import random
 
 app = Flask(__name__)
 
-##Connect to Database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///restaurants.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 
-##Cafe TABLE Configuration
 class Restaurant(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(250), unique=True, nullable=False)
     map_url = db.Column(db.String(500), nullable=False)
+    website_url = db.Column(db.String(500), nullable=False)
     location = db.Column(db.String(250), nullable=False)
     description = db.Column(db.String(250), nullable=False)
     prices = db.Column(db.String(250), nullable=False)
 
     def to_dict(self):
-        # Method 1.
-        dictionary = {}
-        # Loop through each column in the data record
-        for column in self.__table__.columns:
-            # Create a new dictionary entry;
-            # where the key is the name of the column
-            # and the value is the value of the column
-            dictionary[column.name] = getattr(self, column.name)
-        return dictionary
-
-        # Method 2. Altenatively use Dictionary Comprehension to do the same thing.
-        # return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
 
 db.create_all()
@@ -48,6 +36,7 @@ def get_random():
     choice = random.choice(all_restaurants)
     return jsonify(name=choice.name,
                    map_url=choice.map_url,
+                   website_url=choice.website_url,
                    location=choice.location,
                    description=choice.description,
                    prices=choice.prices,
@@ -55,26 +44,28 @@ def get_random():
 
 
 @app.route("/all", methods=["GET", "POST"])
-def get_all_cafes():
+def get_all_restaurants():
     # This uses a List Comprehension but you could also split it into 3 lines.
-    return jsonify(cafes=[cafe.to_dict() for cafe in all_restaurants])
+    return jsonify(restaurants=[restaurant.to_dict() for restaurant in all_restaurants])
 
 
 @app.route("/search")
-def get_cafe_at_location():
+def get_restaurant_at_location():
     query_location = request.args.get("loc")
     restaurant = db.session.query(Restaurant).filter_by(location=query_location).first()
     if restaurant:
-        return jsonify(cafe=restaurant.to_dict())
+        return jsonify(restaurant=restaurant.to_dict())
     else:
         return jsonify(error={"Not Found": "Sorry, we don't have a restaurant at that location."})
 
 
 @app.route("/add", methods=["POST", "GET"])
-def post_new_cafe():
+def post_new_restaurant():
     new_restaurant = Restaurant(
         name=request.form.get("name"),
         location=request.form.get("loc"),
+        map_url=request.form.get("map"),
+        website_url=request.form.get("website"),
         description=request.form.get("description"),
         prices=request.form.get("prices"),
 
@@ -84,7 +75,7 @@ def post_new_cafe():
     return jsonify(response={"success": "Successfully added the new cafe."})
 
 
-@app.route("/update-price/<int:cafe_id>", methods=["PATCH"])
+@app.route("/update-price/<int:restaurant_id>", methods=["PATCH"])
 def patch_new_price(restaurant_id):
     new_price = request.args.get("new_price")
     restaurant = db.session.query(Restaurant).get(restaurant_id)
