@@ -25,7 +25,6 @@ class Restaurant(db.Model):
 
 
 db.create_all()
-all_restaurants = db.session.query(Restaurant).all()
 
 
 @app.route("/")
@@ -35,6 +34,7 @@ def home():
 
 @app.route("/random", methods=["GET", "POST"])
 def get_random():
+    all_restaurants = db.session.query(Restaurant).all()
     choice = random.choice(all_restaurants)
     return jsonify(name=choice.name,
                    map_url=choice.map_url,
@@ -47,45 +47,43 @@ def get_random():
 
 @app.route("/all", methods=["GET", "POST"])
 def get_all_restaurants():
-    # This uses a List Comprehension but you could also split it into 3 lines.
+    all_restaurants = db.session.query(Restaurant).all()
     return jsonify(restaurants=[restaurant.to_dict() for restaurant in all_restaurants])
 
 
 @app.route("/search")
 def get_restaurant_at_location():
     query_location = request.args.get("loc")
-    restaurant = db.session.query(Restaurant).filter_by(location=query_location).first()
+    restaurant = db.session.query(Restaurant).filter_by(location=query_location).all()
     if restaurant:
-        return jsonify(restaurant=restaurant.to_dict())
+        return jsonify(restaurants=[single_restaurant.to_dict() for single_restaurant in restaurant])
     else:
         return jsonify(error={"Not Found": "Sorry, we don't have a restaurant at that location."})
 
 
 @app.route("/add", methods=["POST", "GET"])
 def post_new_restaurant():
-
     restaurant_name = request.form.get("name")
-    response = requests.get("https://www.google.com/search?q=molam&oq=mol&aqs=chrome.0.69i59j46i175i199i433i512j69i57j0i433i512j46i512j69i60l3.834j0j7&sourceid=chrome&ie=UTF-8")
+    response = requests.get(
+        "https://www.google.com/search?q=molam&oq=mol&aqs=chrome.0.69i59j46i175i199i433i512j69i57j0i433i512j46i512j69i"
+        "60l3.834j0j7&sourceid=chrome&ie=UTF-8")
     website = response.text
     soup = BeautifulSoup(website, "html.parser")
     website_link = soup.find_all('a', class_="ab_button")
     print(website_link)
 
+    new_restaurant = Restaurant(
+        name=request.form.get("name"),
+        location=request.form.get("loc"),
+        map_url=request.form.get("map"),
+        website_url=request.form.get("website"),
+        description=request.form.get("description"),
+        prices=request.form.get("prices"),
 
-
-
-    # new_restaurant = Restaurant(
-    #     name=request.form.get("name"),
-    #     location=request.form.get("loc"),
-    #     map_url=request.form.get("map"),
-    #     website_url=request.form.get("website"),
-    #     description=request.form.get("description"),
-    #     prices=request.form.get("prices"),
-    #
-    # )
-    # db.session.add(new_restaurant)
-    # db.session.commit()
-    # return jsonify(response={"success": "Successfully added the new restaurant."})
+    )
+    db.session.add(new_restaurant)
+    db.session.commit()
+    return jsonify(response={"success": "Successfully added the new restaurant."})
 
 
 @app.route("/update-price", methods=["PATCH", "GET"])
